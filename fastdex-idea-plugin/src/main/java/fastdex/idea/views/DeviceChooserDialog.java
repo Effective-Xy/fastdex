@@ -1,19 +1,22 @@
 package fastdex.idea.views;
 
 import com.android.ddmlib.IDevice;
+import com.android.sdklib.AndroidVersion;
 import com.android.sdklib.IAndroidTarget;
+import com.android.tools.idea.model.AndroidModuleInfo;
 import com.android.tools.idea.run.DeviceChooser;
 import com.android.tools.idea.run.DeviceChooserListener;
 import com.google.common.base.Predicate;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.util.Disposer;
+import fastdex.idea.models.AndroidModelWrapper;
 import org.jetbrains.android.facet.AndroidFacet;
 import org.jetbrains.android.util.AndroidBundle;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
 import javax.swing.*;
-import java.awt.*;
+import fastdex.idea.models.FastdexStatus;
+import fastdex.idea.models.AndroidFacetWrapper;
 
 /**
  * Created by tong on 17/9/11.
@@ -23,7 +26,7 @@ public class DeviceChooserDialog extends DialogWrapper {
     private DeviceChooserListener deviceChooserListener;
     private boolean closed;
 
-    public DeviceChooserDialog(@NotNull AndroidFacet facet,
+    public DeviceChooserDialog(FastdexStatus status,@NotNull AndroidFacet facet,
                                @NotNull IAndroidTarget projectTarget,
                                boolean multipleSelection,
                                @Nullable String[] selectedSerials,
@@ -33,7 +36,25 @@ public class DeviceChooserDialog extends DialogWrapper {
 
         getOKAction().setEnabled(false);
 
-        myDeviceChooser = new DeviceChooser(multipleSelection, getOKAction(), facet, projectTarget, filter);
+        DeviceChooser localDeviceChooser = null;
+        if (status.isSupportBuildCache()) {
+            try {
+                AndroidFacetWrapper wrapper = new AndroidFacetWrapper(facet);
+                AndroidVersion myMinSdkVersion = AndroidModuleInfo.get(wrapper).getRuntimeMinSdkVersion();
+                if (myMinSdkVersion.getApiLevel() != AndroidModelWrapper.MIN_SDK_VERSION) {
+                    throw new Exception("");
+                }
+                localDeviceChooser = new DeviceChooser(multipleSelection, getOKAction(), wrapper, projectTarget, filter);
+            } catch (Throwable e) {
+                localDeviceChooser = null;
+            }
+        }
+
+        if (localDeviceChooser == null) {
+            localDeviceChooser = new DeviceChooser(multipleSelection, getOKAction(), facet, projectTarget, filter);
+        }
+
+        myDeviceChooser = localDeviceChooser;
         Disposer.register(myDisposable, myDeviceChooser);
         myDeviceChooser.addListener(new DeviceChooserListener() {
             @Override

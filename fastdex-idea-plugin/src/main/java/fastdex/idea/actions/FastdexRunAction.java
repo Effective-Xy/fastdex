@@ -76,8 +76,7 @@ public class FastdexRunAction extends BaseAction {
                 String value = PropertiesComponent.getInstance(currentProject).getValue(ANDROID_TARGET_DEVICES_PROPERTY);
                 String[] selectedSerials = value != null ? fromString(value) : null;
                 AndroidPlatform platform = myFacet.getConfiguration().getAndroidPlatform();
-
-                DeviceChooserDialog chooser = new DeviceChooserDialog(myFacet, platform.getTarget(), true, selectedSerials, null);
+                DeviceChooserDialog chooser = new DeviceChooserDialog(status,myFacet, platform.getTarget(), true, selectedSerials, null);
 
                 IDevice[] devices = null;
                 try {
