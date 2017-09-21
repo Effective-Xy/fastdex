@@ -2,7 +2,6 @@ package fastdex.build.variant
 
 import com.github.typ0520.fastdex.Version
 import fastdex.build.extension.FastdexExtension
-import fastdex.build.lib.snapshoot.string.StringNode
 import fastdex.build.task.FastdexInstantRunTask
 import fastdex.build.util.Constants
 import fastdex.build.util.FastdexInstantRun

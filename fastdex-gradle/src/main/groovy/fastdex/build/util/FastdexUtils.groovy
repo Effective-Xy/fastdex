@@ -358,4 +358,13 @@ public class FastdexUtils {
     public static boolean isDataBindingEnabled(Project project) {
         return project.android.dataBinding && project.android.dataBinding.enabled
     }
+
+    /**
+     * 是否使用build cache
+     * @param project
+     * @return
+     */
+    public static boolean useBuildCache(Project project) {
+        return GradleUtils.ANDROID_GRADLE_PLUGIN_VERSION.compareTo("2.3") >= 0 && project.fastdex.useBuildCache && !project.hasProperty("android.injected.invoked.from.ide")
+    }
 }

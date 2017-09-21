@@ -36,19 +36,55 @@ import fastdex.build.task.FastdexCustomJavacTask
  * Created by tong on 17/10/3.
  */
 class FastdexPlugin implements Plugin<Project> {
+    private int originDefaultMinSdkVersion
+    private Map<String,Integer> flavorNameMinSdkVersionMap = new HashMap()
+
     @Override
     public void apply(Project project) {
         project.extensions.create('fastdex', FastdexExtension)
-
         FastdexBuildListener.addByProject(project)
+
+        if (!project.plugins.hasPlugin('com.android.application')) {
+            throw new GradleException('Android Application plugin required')
+        }
+
+        if (FastdexUtils.useBuildCache(project)) {
+            /**
+             *  手动把最小支持版本改成了21是为了在所有的build-type上触发使用dex缓存，为了保证低版本可以安装在FastdexManifestTask任务中会把xml文件中的最低支出版本恢复回来
+             */
+
+            //为了在所有的build type上都触发使用2.3.0 的build-cache
+
+            originDefaultMinSdkVersion = project.android.defaultConfig.minSdkVersion
+
+            if (project.android.defaultConfig.minSdkVersion.getApiLevel() < 21) {
+                project.android.defaultConfig.minSdkVersion = 21
+            }
+
+            project.android.productFlavors.each {
+                if (it.minSdkVersion) {
+                    flavorNameMinSdkVersionMap.put(it.name,it.minSdkVersion.getApiLevel())
+
+                    if (it.minSdkVersion.getApiLevel() < 21) {
+                        it.minSdkVersion = 21
+                    }
+                }
+                else {
+                    flavorNameMinSdkVersionMap.put(it.name,originDefaultMinSdkVersion)
+                }
+            }
+
+            //如果最低支持该本改成了21，会使用v2SigningEnabled
+            project.android.signingConfigs.each {
+                it.v2SigningEnabled = false
+            }
+        }
+
         project.afterEvaluate {
             def configuration = project.fastdex
             if (!configuration.fastdexEnable) {
                 project.logger.error("====fastdex tasks are disabled.====")
                 return
-            }
-            if (!project.plugins.hasPlugin('com.android.application')) {
-                throw new GradleException('generateTinkerApk: Android Application plugin required')
             }
 
             if (FastdexUtils.isDataBindingEnabled(project)) {
@@ -138,6 +174,17 @@ class FastdexPlugin implements Plugin<Project> {
                     //替换项目的Application为com.dx168.fastdex.runtime.FastdexApplication
                     FastdexManifestTask manifestTask = project.tasks.create("fastdexProcess${variantName}Manifest", FastdexManifestTask)
                     manifestTask.fastdexVariant = fastdexVariant
+                    if (variant.flavorName) {
+                        manifestTask.originMinSdkVersion = flavorNameMinSdkVersionMap.get(variant.flavorName)
+
+                        println "${variant.flavorName}: " + manifestTask.originMinSdkVersion
+                    }
+                    else {
+                        manifestTask.originMinSdkVersion = originDefaultMinSdkVersion
+
+                        println "manifestTask.originMinSdkVersion: " + manifestTask.originMinSdkVersion
+                    }
+
                     manifestTask.mustRunAfter variantOutput.processManifest
                     variantOutput.processResources.dependsOn manifestTask
 
