@@ -38,5 +38,5 @@ public class FastdexExtension {
     /**
      * 是否使用buildCache
      */
-    boolean useBuildCache = false
+    boolean useBuildCache = true
 }

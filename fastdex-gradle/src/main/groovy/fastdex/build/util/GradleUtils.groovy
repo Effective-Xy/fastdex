@@ -1,6 +1,7 @@
 package fastdex.build.util
 
 import com.android.build.api.transform.Format
+import com.android.build.gradle.internal.pipeline.IntermediateFolderUtils
 import com.android.build.gradle.internal.pipeline.TransformManager
 import com.android.builder.model.Version
 import com.google.common.collect.Lists
@@ -13,7 +14,6 @@ import java.lang.reflect.Method
 import java.lang.reflect.Proxy
 import com.android.build.api.transform.DirectoryInput
 import com.android.build.api.transform.JarInput
-import com.android.build.api.transform.QualifiedContent
 import com.android.build.api.transform.Status
 import com.android.build.api.transform.TransformInput
 import com.android.build.api.transform.TransformInvocation
@@ -21,6 +21,8 @@ import com.android.build.gradle.internal.pipeline.TransformInvocationBuilder
 import com.google.common.collect.ImmutableList
 import com.android.build.api.transform.Transform
 import org.gradle.api.Project
+import com.android.build.api.transform.QualifiedContent
+import com.android.build.api.transform.QualifiedContent.ContentType
 
 /**
  * Created by tong on 17/3/14.
@@ -70,57 +72,104 @@ public class GradleUtils {
      * @return
      */
     public static File getDexOutputDir(Project project,Transform realTransform,TransformInvocation transformInvocation) {
+        return getDexOutputDir(project, realTransform, transformInvocation, false)
+    }
+
+    /**
+     * 获取transformClassesWithDexFor${variantName}任务的dex输出目录
+     * @param transformInvocation
+     * @return
+     */
+    public static File getDexOutputDir(Project project,Transform realTransform,TransformInvocation transformInvocation,boolean useBuildCache) {
         def outputProvider = transformInvocation.getOutputProvider()
         def outputDir = null
-        String androidGradlePluginVersion = ANDROID_GRADLE_PLUGIN_VERSION
+        if (useBuildCache) {
+//            List<DirectoryInput> dirInputs = Lists.newArrayList();
+//            List<JarInput> jarInputs = Lists.newArrayList();
+//
+//            for (TransformInput input : transformInvocation.getInputs()) {
+//                dirInputs.addAll(input.getDirectoryInputs())
+//                jarInputs.addAll(input.getJarInputs())
+//
+//                break
+//            }
+            //File location = realTransform.getOutputLocation(outputProvider,dirInputs.get(0),dirInputs.get(0).getFile()).getParentFile().getParentFile().getParentFile();
 
-        if (androidGradlePluginVersion.startsWith("2.4.")) {
-            outputDir = outputProvider.getContentLocation(
-                            "main",
-                            realTransform.getOutputTypes(),
-                            TransformManager.SCOPE_FULL_PROJECT,
-                            Format.DIRECTORY)
+            File location = com.android.utils.FileUtils.join(transformInvocation.getOutputProvider().rootLocation,
+                    IntermediateFolderUtils.FOLDERS,
+                    typesToString(TransformManager.CONTENT_DEX))
 
-            return outputDir
-        }
-
-        List<JarInput> jarInputs = Lists.newArrayList();
-        List<DirectoryInput> directoryInputs = Lists.newArrayList();
-        for (TransformInput input : transformInvocation.getInputs()) {
-            jarInputs.addAll(input.getJarInputs());
-            directoryInputs.addAll(input.getDirectoryInputs());
-        }
-
-        if (androidGradlePluginVersion.compareTo("2.3.0") < 0) {
-            //2.3.0以前的版本
-            if ((jarInputs.size() + directoryInputs.size()) == 1
-                    || !realTransform.dexOptions.getPreDexLibraries()) {
-                outputDir = outputProvider.getContentLocation("main",
-                        realTransform.getOutputTypes(), realTransform.getScopes(),
-                        Format.DIRECTORY);
-            }
-            else {
-                outputDir = outputProvider.getContentLocation("main",
-                        TransformManager.CONTENT_DEX, realTransform.getScopes(),
-                        Format.DIRECTORY);
-            }
+            return location
         }
         else {
-            //2.3.0以后的版本包括2.3.0
-            if ((jarInputs.size() + directoryInputs.size()) == 1
-                    || !realTransform.dexOptions.getPreDexLibraries()) {
-                outputDir = outputProvider.getContentLocation("main",
+            String androidGradlePluginVersion = ANDROID_GRADLE_PLUGIN_VERSION
+            if (androidGradlePluginVersion.startsWith("2.4.")) {
+                outputDir = outputProvider.getContentLocation(
+                        "main",
                         realTransform.getOutputTypes(),
                         TransformManager.SCOPE_FULL_PROJECT,
-                        Format.DIRECTORY);
+                        Format.DIRECTORY)
+
+                return outputDir
+            }
+
+            List<JarInput> jarInputs = Lists.newArrayList();
+            List<DirectoryInput> directoryInputs = Lists.newArrayList();
+            for (TransformInput input : transformInvocation.getInputs()) {
+                jarInputs.addAll(input.getJarInputs());
+                directoryInputs.addAll(input.getDirectoryInputs());
+            }
+
+            if (androidGradlePluginVersion.compareTo("2.3.0") < 0) {
+                //2.3.0以前的版本
+                if ((jarInputs.size() + directoryInputs.size()) == 1
+                        || !realTransform.dexOptions.getPreDexLibraries()) {
+                    outputDir = outputProvider.getContentLocation("main",
+                            realTransform.getOutputTypes(), realTransform.getScopes(),
+                            Format.DIRECTORY);
+                }
+                else {
+                    outputDir = outputProvider.getContentLocation("main",
+                            TransformManager.CONTENT_DEX, realTransform.getScopes(),
+                            Format.DIRECTORY);
+                }
             }
             else {
-                outputDir = outputProvider.getContentLocation("main",
-                        TransformManager.CONTENT_DEX, TransformManager.SCOPE_FULL_PROJECT,
-                        Format.DIRECTORY);
+                //2.3.0以后的版本包括2.3.0
+                if ((jarInputs.size() + directoryInputs.size()) == 1
+                        || !realTransform.dexOptions.getPreDexLibraries()) {
+                    outputDir = outputProvider.getContentLocation("main",
+                            realTransform.getOutputTypes(),
+                            TransformManager.SCOPE_FULL_PROJECT,
+                            Format.DIRECTORY);
+                }
+                else {
+                    outputDir = outputProvider.getContentLocation("main",
+                            TransformManager.CONTENT_DEX, TransformManager.SCOPE_FULL_PROJECT,
+                            Format.DIRECTORY);
+                }
             }
         }
         return outputDir;
+    }
+
+    private static String scopesToString(Set scopes) {
+        int value = 0;
+        for (Object scope : scopes) {
+            value += scope.getValue();
+        }
+
+        return String.format("%x", value);
+    }
+
+
+    private static String typesToString(Set<ContentType> types) {
+        int value = 0;
+        for (ContentType type : types) {
+            value += type.getValue();
+        }
+
+        return String.format("%x", value);
     }
 
     /**

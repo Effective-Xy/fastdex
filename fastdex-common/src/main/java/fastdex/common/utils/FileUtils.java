@@ -243,10 +243,14 @@ public class FileUtils {
         return output.toByteArray();
     }
 
-    public static final void copyDir(File sourceDir, File destDir, final String suffix) throws IOException {
+    public static int copyDir(File sourceDir, File destDir, final String suffix) throws IOException {
         final Path sourcePath = sourceDir.toPath();
         final Path destPath = destDir.toPath();
-        Files.walkFileTree(sourceDir.toPath(),new SimpleFileVisitor<Path>(){
+
+
+        class MySimpleFileVisitor extends SimpleFileVisitor<Path> {
+            public int totalSize = 0;
+
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                 if (suffix != null && !file.toFile().getName().endsWith(suffix)) {
@@ -258,31 +262,35 @@ public class FileUtils {
                 File source = file.toFile();
                 File dest = classFilePath.toFile();
                 copyFileUsingStream(source,dest);
-
                 dest.setLastModified(source.lastModified());
+                totalSize++;
                 return FileVisitResult.CONTINUE;
             }
-        });
-    }
-
-    public static final void copyDir(File sourceDir, File destDir) throws IOException {
-        copyDir(sourceDir,destDir,null);
-    }
-
-
-    public static void copyDirectoryOneLocationToAnotherLocation(File sourceLocation, File targetLocation) throws IOException {
-        if (sourceLocation.isDirectory()) {
-            if (!targetLocation.exists()) {
-                targetLocation.mkdir();
-            }
-            String[] children = sourceLocation.list();
-            for (int i = 0; i < sourceLocation.listFiles().length; i++) {
-                copyDirectoryOneLocationToAnotherLocation(new File(sourceLocation, children[i]), new File(targetLocation, children[i]));
-            }
-        } else {
-            copyFileUsingStream(sourceLocation,targetLocation);
         }
+
+        MySimpleFileVisitor simpleFileVisitor = new MySimpleFileVisitor();
+        Files.walkFileTree(sourceDir.toPath(),simpleFileVisitor);
+
+        return simpleFileVisitor.totalSize;
     }
+
+    public static int copyDir(File sourceDir, File destDir) throws IOException {
+        return copyDir(sourceDir,destDir,null);
+    }
+
+//    public static void copyDirectoryOneLocationToAnotherLocation(File sourceLocation, File targetLocation) throws IOException {
+//        if (sourceLocation.isDirectory()) {
+//            if (!targetLocation.exists()) {
+//                targetLocation.mkdir();
+//            }
+//            String[] children = sourceLocation.list();
+//            for (int i = 0; i < sourceLocation.listFiles().length; i++) {
+//                copyDirectoryOneLocationToAnotherLocation(new File(sourceLocation, children[i]), new File(targetLocation, children[i]));
+//            }
+//        } else {
+//            copyFileUsingStream(sourceLocation,targetLocation);
+//        }
+//    }
 
 
     /**

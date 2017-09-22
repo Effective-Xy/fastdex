@@ -5,6 +5,12 @@ import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.Project
 import fastdex.common.utils.FileUtils
 
+import java.nio.file.FileVisitResult
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.attribute.BasicFileAttributes
+
 /**
  * Created by tong on 17/3/14.
  */
@@ -360,11 +366,73 @@ public class FastdexUtils {
     }
 
     /**
+     * 递增指定目录中的dex
+     *
+     * classes.dex   => classes2.dex
+     * classes2.dex  => classes3.dex
+     * classesN.dex  => classes(N + 1).dex
+     *
+     * @param dexDir
+     */
+    public static void incrementDexDir(File dexDir,int dsize) {
+        if (dsize <= 0) {
+            throw new RuntimeException("dsize must be greater than 0!")
+        }
+        //classes.dex  => classes2.dex.tmp
+        //classes2.dex => classes3.dex.tmp
+        //classesN.dex => classes(N + 1).dex.tmp
+
+        String tmpSuffix = ".tmp"
+        File classesDex = new File(dexDir,Constants.CLASSES_DEX)
+        if (FileUtils.isLegalFile(classesDex)) {
+            classesDex.renameTo(new File(dexDir,"classes${dsize + 1}.dex${tmpSuffix}"))
+        }
+        int point = 2
+        File dexFile = new File(dexDir,"${Constants.CLASSES}${point}${Constants.DEX_SUFFIX}")
+        while (FileUtils.isLegalFile(dexFile)) {
+            new File(dexDir,"classes${point}.dex").renameTo(new File(dexDir,"classes${point + dsize}.dex${tmpSuffix}"))
+            point++
+            dexFile = new File(dexDir,"classes${point}.dex")
+        }
+
+        //classes2.dex.tmp => classes2.dex
+        //classes3.dex.tmp => classes3.dex
+        //classesN.dex.tmp => classesN.dex
+        point = dsize + 1
+        dexFile = new File(dexDir,"classes${point}.dex${tmpSuffix}")
+        while (FileUtils.isLegalFile(dexFile)) {
+            dexFile.renameTo(new File(dexDir,"classes${point}.dex"))
+            point++
+            dexFile = new File(dexDir,"classes${point}.dex${tmpSuffix}")
+        }
+    }
+
+    /**
      * 是否使用build cache
      * @param project
      * @return
      */
     public static boolean useBuildCache(Project project) {
-        return GradleUtils.ANDROID_GRADLE_PLUGIN_VERSION.compareTo("2.3") >= 0 && project.fastdex.useBuildCache && !project.hasProperty("android.injected.invoked.from.ide")
+        return GradleUtils.ANDROID_GRADLE_PLUGIN_VERSION.compareTo("2.3") >= 0 && !project.hasProperty("android.injected.invoked.from.ide")
+    }
+
+    public static void removeFastdexRuntimeDex(File dexDir,boolean useBuildCache) {
+        if (!useBuildCache || dexDir == null || !dexDir.exists() && dexDir.isFile()) {
+            return
+        }
+
+        Files.walkFileTree(dexDir.toPath(),new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                if (!file.toFile().getName().endsWith(Constants.DEX_SUFFIX)) {
+                    return FileVisitResult.CONTINUE;
+                }
+
+                if (Constants.FASTDEX_RUNTIMNE_BUILD_CACHE_FILE_NAME.equals(file.getParent().getFileName())) {
+                    file.getParent().deleteDir()
+                }
+                return FileVisitResult.CONTINUE;
+            }
+        });
     }
 }

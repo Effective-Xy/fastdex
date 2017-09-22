@@ -26,4 +26,6 @@ public interface Constants extends ShareConstants {
 
     String DEX_MERGE_JAR_FILENAME = "fastdex-dex-merge.jar"
     String STUDIO_INFO_SCRIPT_MACOS = "fastdex-studio-info-macos-%s.sh"
+
+    String FASTDEX_RUNTIMNE_BUILD_CACHE_FILE_NAME = "0_0"
 }

@@ -38,6 +38,8 @@ public class MetaInfo {
 
     public boolean active
 
+    public boolean useBuildCache
+
 
     /**
      * 是否移动了工程目录
