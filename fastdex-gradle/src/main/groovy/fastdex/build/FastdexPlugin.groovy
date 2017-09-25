@@ -48,62 +48,62 @@ class FastdexPlugin implements Plugin<Project> {
             throw new GradleException('Android Application plugin required')
         }
 
-        project.gradle.afterProject {
-            if (it == project) {
-                boolean useBuildCache = FastdexUtils.useBuildCache(project)
-                if (useBuildCache) {
-                    project.logger.error("==fastdex build-cache enabled...")
-                    println "project.android.defaultConfig.minSdkVersion: " + project.android.defaultConfig
-
-                    /**
-                     *  手动把最小支持版本改成了21是为了在所有的build-type上触发使用dex缓存，为了保证低版本可以安装在FastdexManifestTask任务中会把xml文件中的最低支出版本恢复回来
-                     */
-
-                    //为了在所有的build type上都触发使用2.3.0 的build-cache
-
-                    originDefaultMinSdkVersion = project.android.defaultConfig.minSdkVersion.getApiLevel()
-                    if (project.android.defaultConfig.minSdkVersion.getApiLevel() < 21) {
-                        project.android.defaultConfig.minSdkVersion = 21
-                    }
-
-                    project.android.productFlavors.each {
-                        if (it.minSdkVersion) {
-                            flavorNameMinSdkVersionMap.put(it.name,it.minSdkVersion.getApiLevel())
-
-                            if (it.minSdkVersion.getApiLevel() < 21) {
-                                it.minSdkVersion = 21
-                            }
-                        }
-                        else {
-                            flavorNameMinSdkVersionMap.put(it.name,originDefaultMinSdkVersion)
-                        }
-                    }
-                } else {
-                    if (GradleUtils.ANDROID_GRADLE_PLUGIN_VERSION.compareTo("2.3") < 0) {
-                        project.logger.error("==fastdex android gradle plugin version < 2.3, build-cache disabled")
-                    }
-                    if (project.hasProperty("android.injected.invoked.from.ide")) {
-                        project.logger.error("==fastdex build from studio run-button, build-cache disabled")
-                    }
-                    if (!project.fastdex.useBuildCache) {
-                        project.logger.error("==fastdex fastdex.useBuildCache = false, build-cache disabled")
-                    }
-                }
-            }
-        }
-
-        try {
-            boolean useBuildCache = FastdexUtils.useBuildCache(project)
-            if (useBuildCache) {
-                //如果最低支持该本改成了21，会使用v2SigningEnabled
-                project.android.signingConfigs.each {
-                    it.v2SigningEnabled = false
-                    it.v1SigningEnabled = true
-                }
-            }
-        } catch (Throwable e) {
-
-        }
+//        project.gradle.afterProject {
+//            if (it == project) {
+//                boolean useBuildCache = FastdexUtils.useBuildCache(project)
+//                if (useBuildCache) {
+//                    project.logger.error("==fastdex build-cache enabled...")
+//                    println "project.android.defaultConfig.minSdkVersion: " + project.android.defaultConfig
+//
+//                    /**
+//                     *  手动把最小支持版本改成了21是为了在所有的build-type上触发使用dex缓存，为了保证低版本可以安装在FastdexManifestTask任务中会把xml文件中的最低支出版本恢复回来
+//                     */
+//
+//                    //为了在所有的build type上都触发使用2.3.0 的build-cache
+//
+//                    originDefaultMinSdkVersion = project.android.defaultConfig.minSdkVersion.getApiLevel()
+//                    if (project.android.defaultConfig.minSdkVersion.getApiLevel() < 21) {
+//                        project.android.defaultConfig.minSdkVersion = 21
+//                    }
+//
+//                    project.android.productFlavors.each {
+//                        if (it.minSdkVersion) {
+//                            flavorNameMinSdkVersionMap.put(it.name,it.minSdkVersion.getApiLevel())
+//
+//                            if (it.minSdkVersion.getApiLevel() < 21) {
+//                                it.minSdkVersion = 21
+//                            }
+//                        }
+//                        else {
+//                            flavorNameMinSdkVersionMap.put(it.name,originDefaultMinSdkVersion)
+//                        }
+//                    }
+//                } else {
+//                    if (GradleUtils.ANDROID_GRADLE_PLUGIN_VERSION.compareTo("2.3") < 0) {
+//                        project.logger.error("==fastdex android gradle plugin version < 2.3, build-cache disabled")
+//                    }
+//                    if (project.hasProperty("android.injected.invoked.from.ide")) {
+//                        project.logger.error("==fastdex build from studio run-button, build-cache disabled")
+//                    }
+//                    if (!project.fastdex.useBuildCache) {
+//                        project.logger.error("==fastdex fastdex.useBuildCache = false, build-cache disabled")
+//                    }
+//                }
+//            }
+//        }
+//
+//        try {
+//            boolean useBuildCache = FastdexUtils.useBuildCache(project)
+//            if (useBuildCache) {
+//                //如果最低支持该本改成了21，会使用v2SigningEnabled
+//                project.android.signingConfigs.each {
+//                    it.v2SigningEnabled = false
+//                    it.v1SigningEnabled = true
+//                }
+//            }
+//        } catch (Throwable e) {
+//
+//        }
 
         project.afterEvaluate {
             def configuration = project.fastdex
@@ -127,14 +127,14 @@ class FastdexPlugin implements Plugin<Project> {
                 }
             }
 
-            boolean useBuildCache = FastdexUtils.useBuildCache(project)
-            if (useBuildCache) {
-                //如果最低支持该本改成了21，会使用v2SigningEnabled
-                project.android.signingConfigs.each {
-                    it.v2SigningEnabled = false
-                    it.v1SigningEnabled = true
-                }
-            }
+//            boolean useBuildCache = FastdexUtils.useBuildCache(project)
+//            if (useBuildCache) {
+//                //如果最低支持该本改成了21，会使用v2SigningEnabled
+//                project.android.signingConfigs.each {
+//                    it.v2SigningEnabled = false
+//                    it.v1SigningEnabled = true
+//                }
+//            }
 
             def android = project.extensions.android
             //open jumboMode

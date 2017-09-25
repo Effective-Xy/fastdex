@@ -417,7 +417,7 @@ public class FastdexUtils {
      * @return
      */
     public static boolean useBuildCache(Project project) {
-        return GradleUtils.ANDROID_GRADLE_PLUGIN_VERSION.compareTo("2.3") >= 0 && !project.hasProperty("android.injected.invoked.from.ide")
+        return GradleUtils.ANDROID_GRADLE_PLUGIN_VERSION.compareTo("2.3") >= 0// && !project.hasProperty("android.injected.invoked.from.ide")
     }
 
     public static void removeFastdexRuntimeDex(File dexDir,boolean useBuildCache) {

@@ -61,14 +61,14 @@ public class FastdexManifestTask extends DefaultTask {
 
             application.appendNode('activity', [(ns.name): TRANSPARENT_ACTIVITY, (ns.theme): '@android:style/Theme.Translucent.NoTitleBar'])
 
-            if (FastdexUtils.useBuildCache(project)) {
-                //还原minSdk
-                def usesSdk = xml['uses-sdk']
-                groovy.xml.QName minSdkVersionAttr = new groovy.xml.QName("http://schemas.android.com/apk/res/android", 'minSdkVersion', 'android');
-                usesSdk.findAll {
-                    it.attributes().put(minSdkVersionAttr,String.valueOf(originMinSdkVersion))
-                }
-            }
+//            if (FastdexUtils.useBuildCache(project)) {
+//                //还原minSdk
+//                def usesSdk = xml['uses-sdk']
+//                groovy.xml.QName minSdkVersionAttr = new groovy.xml.QName("http://schemas.android.com/apk/res/android", 'minSdkVersion', 'android');
+//                usesSdk.findAll {
+//                    it.attributes().put(minSdkVersionAttr,String.valueOf(originMinSdkVersion))
+//                }
+//            }
 
             // Write the manifest file
             def printer = new XmlNodePrinter(new PrintWriter(fastdexVariant.manifestPath, "utf-8"))
