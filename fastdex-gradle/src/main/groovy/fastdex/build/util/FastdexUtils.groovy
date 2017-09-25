@@ -127,6 +127,7 @@ public class FastdexUtils {
         if (!FileUtils.dirExists(cacheDexDir.absolutePath)) {
             return false;
         }
+
         FindDexSimpleFileVisitor visitor = new FindDexSimpleFileVisitor();
         Files.walkFileTree(cacheDexDir.toPath(),visitor);
         return visitor.hasDex;
@@ -432,7 +433,7 @@ public class FastdexUtils {
                     return FileVisitResult.CONTINUE;
                 }
 
-                if (Constants.FASTDEX_RUNTIMNE_BUILD_CACHE_FILE_NAME.equals(file.getParent().getFileName())) {
+                if (Constants.FASTDEX_RUNTIMNE_BUILD_CACHE_FILE_NAME.equals(file.getParent().toFile().getName())) {
                     file.getParent().deleteDir()
                 }
                 return FileVisitResult.CONTINUE;

@@ -154,12 +154,59 @@ dependencies {
     testCompile 'junit:junit:4.12'
 }
 
+class MyPackageApplication extends com.android.build.gradle.tasks.PackageApplication {
+
+    MyPackageApplication() {
+        println ("MyPackageApplication 哈哈哈")
+    }
+
+    @Override
+    protected void doFullTaskAction() throws IOException {
+        println ("MyPackageApplication 哈哈哈2")
+        super.doFullTaskAction()
+    }
+}
+
 project.afterEvaluate {
+
     android.applicationVariants.all { variant ->
         def variantName = variant.name.capitalize()
         def variantOutput = variant.outputs.first()
 
 
+
+        if ("Debug".equals(variantName)) {
+            //taskManager
+
+            //taskManager
+            def taskManager = variant.getVariantData().taskManager
+
+            println ("#taskManager : ${taskManager.getAndroidTasks()}")
+
+            def map = taskManager.getAndroidTasks().tasks
+            def packageTask = map.get("packageDebug")
+            def newPackageTask = new com.android.build.gradle.internal.scope.AndroidTask(packageTask.getName(), MyPackageApplication.class)
+            map.put("packageDebug", newPackageTask)
+
+
+
+            def task = tasks['packageDebug']
+            task.doFirst {
+                com.android.build.gradle.internal.scope.DefaultGradlePackagingScope packagingScope = new com.android.build.gradle.internal.scope.DefaultGradlePackagingScope(variant.getVariantData().getOutputs().get(0).getScope());
+                println packagingScope.getDexFolders()
+
+                for (File file : packagingScope.getDexFolders()) {
+                    println file
+                }
+
+                println "==============="
+                Map updatedDex = com.android.builder.files.IncrementalRelativeFileSets.fromZipsAndDirectories(packagingScope.getDexFolders())
+
+                for (Object obj : updatedDex.keySet()) {
+                    println ("${obj.file}")
+                }
+            }
+        }
     }
 }
 

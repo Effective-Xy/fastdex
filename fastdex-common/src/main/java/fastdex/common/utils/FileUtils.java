@@ -244,6 +244,10 @@ public class FileUtils {
     }
 
     public static int copyDir(File sourceDir, File destDir, final String suffix) throws IOException {
+        return copyDir(sourceDir, destDir, suffix, true);
+    }
+
+    public static int copyDir(File sourceDir, File destDir, final String suffix, final boolean override) throws IOException {
         final Path sourcePath = sourceDir.toPath();
         final Path destPath = destDir.toPath();
 
@@ -261,16 +265,19 @@ public class FileUtils {
 
                 File source = file.toFile();
                 File dest = classFilePath.toFile();
-                copyFileUsingStream(source,dest);
-                dest.setLastModified(source.lastModified());
-                totalSize++;
+
+                if (override || !isLegalFile(dest)) {
+                    //System.out.println("dest: " + dest);
+                    copyFileUsingStream(source,dest);
+                    dest.setLastModified(source.lastModified());
+                    totalSize++;
+                }
                 return FileVisitResult.CONTINUE;
             }
         }
 
         MySimpleFileVisitor simpleFileVisitor = new MySimpleFileVisitor();
         Files.walkFileTree(sourceDir.toPath(),simpleFileVisitor);
-
         return simpleFileVisitor.totalSize;
     }
 

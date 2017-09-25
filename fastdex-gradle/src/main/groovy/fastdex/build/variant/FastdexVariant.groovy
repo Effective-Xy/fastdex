@@ -35,9 +35,9 @@ public class FastdexVariant {
     boolean hasDexCache
     boolean firstPatchBuild
     boolean initialized
-    boolean hasJarMergingTask
     boolean executedJarMerge
     boolean executedDexTransform
+    boolean hasJarMergingTask
     MetaInfo metaInfo
     FastdexInstantRun fastdexInstantRun
     FastdexInstantRunTask fastdexInstantRunTask
@@ -74,6 +74,8 @@ public class FastdexVariant {
         }
         initialized = true
         hasDexCache = FastdexUtils.hasDexCache(project,variantName)
+
+        project.logger.error("==fastdex hasDexCache: ${hasDexCache}")
         if (hasDexCache) {
             File diffResultSetFile = FastdexUtils.getDiffResultSetFile(project,variantName)
             if (!FileUtils.isLegalFile(diffResultSetFile)) {
@@ -268,8 +270,12 @@ public class FastdexVariant {
      * 补丁打包是否需要执行dex merge
      * @return
      */
-    public boolean willExecDexMerge() {
+    def willExecDexMerge() {
         return hasDexCache && projectSnapshoot.diffResultSet.changedJavaFileDiffInfos.size() >= configuration.dexMergeThreshold
+    }
+
+    def getVariantConfiguration() {
+        return androidVariant.getVariantData().getVariantConfiguration()
     }
 
     private class CheckException extends Exception {

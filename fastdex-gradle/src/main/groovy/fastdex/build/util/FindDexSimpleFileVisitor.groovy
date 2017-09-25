@@ -1,6 +1,5 @@
 package fastdex.build.util;
 
-import java.io.IOException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
@@ -15,7 +14,7 @@ public class FindDexSimpleFileVisitor extends SimpleFileVisitor<Path> {
 
     @Override
     public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-        if (file.getFileName().endsWith(ShareConstants.DEX_SUFFIX)) {
+        if (file.toString().endsWith(ShareConstants.DEX_SUFFIX)) {
             hasDex = true;
             return FileVisitResult.TERMINATE;
         }
