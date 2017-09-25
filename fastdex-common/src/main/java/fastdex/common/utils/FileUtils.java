@@ -284,7 +284,7 @@ public class FileUtils {
 //                targetLocation.mkdir();
 //            }
 //            String[] children = sourceLocation.list();
-//            for (int i = 0; i < sourceLocation.listFiles().length; i++) {
+//            for (int i = 0; i < children.length; i++) {
 //                copyDirectoryOneLocationToAnotherLocation(new File(sourceLocation, children[i]), new File(targetLocation, children[i]));
 //            }
 //        } else {

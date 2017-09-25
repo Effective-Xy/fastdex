@@ -4,7 +4,6 @@ import fastdex.common.ShareConstants
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.Project
 import fastdex.common.utils.FileUtils
-
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
@@ -125,7 +124,12 @@ public class FastdexUtils {
      */
     public static boolean hasDexCache(Project project, String variantName) {
         File cacheDexDir = getDexCacheDir(project,variantName)
-        return FileUtils.hasDex(cacheDexDir)
+        if (!FileUtils.dirExists(cacheDexDir.absolutePath)) {
+            return false;
+        }
+        FindDexSimpleFileVisitor visitor = new FindDexSimpleFileVisitor();
+        Files.walkFileTree(cacheDexDir.toPath(),visitor);
+        return visitor.hasDex;
     }
 
     /**
