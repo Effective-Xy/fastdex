@@ -9,7 +9,7 @@ public interface Constants extends ShareConstants {
     /**
      * 最低支持的android gradle build版本
      */
-    String MIN_SUPPORT_ANDROID_GRADLE_VERSION = "2.0.0"
+    String MIN_SUPPORT_ANDROID_GRADLE_VERSION = "2.1.0"
     String BUILD_DIR = "fastdex"
     String INJECTED_JAR_FILENAME = "injected-combined.jar"
     String R_TXT = "r.txt"

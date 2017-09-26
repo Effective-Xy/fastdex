@@ -123,7 +123,7 @@ class FastdexPlugin implements Plugin<Project> {
                 //最低支持2.0.0
                 String androidGradlePluginVersion = GradleUtils.ANDROID_GRADLE_PLUGIN_VERSION
                 if (androidGradlePluginVersion.compareTo(Constants.MIN_SUPPORT_ANDROID_GRADLE_VERSION) < 0) {
-                    throw new GradleException("Your version too old 'com.android.tools.build:gradle:${androidGradlePluginVersion}', minimum support version 2.0.0")
+                    throw new GradleException("Your version too old 'com.android.tools.build:gradle:${androidGradlePluginVersion}', minimum support version 2.1.0")
                 }
             }
 

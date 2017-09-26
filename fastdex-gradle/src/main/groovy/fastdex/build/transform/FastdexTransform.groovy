@@ -80,6 +80,7 @@ class FastdexTransform extends TransformProxy {
 
                 //获取dex输出路径
                 File dexOutputDir = GradleUtils.getDexOutputDir(project,base,transformInvocation,useBuildCache)
+
                 //merged dex
                 File mergedPatchDexDir = FastdexUtils.getMergedPatchDexDir(fastdexVariant.project,fastdexVariant.variantName)
 
@@ -134,34 +135,38 @@ class FastdexTransform extends TransformProxy {
 
             project.logger.error("==fastdex normal transform start")
 
-            if (useBuildCache) {
+            if (!fastdexVariant.hasJarMergingTask) {
                 ClassInject.injectTransformInvocation(fastdexVariant,transformInvocation)
             }
-            else {
-                def config = fastdexVariant.getVariantConfiguration()
-                boolean isMultiDexEnabled = config.isMultiDexEnabled()
-
-                if (isMultiDexEnabled) {
-                    if (!fastdexVariant.executedJarMerge) {
-                        ClassInject.injectTransformInvocation(fastdexVariant,transformInvocation)
-                        File injectedJar = FastdexUtils.getInjectedJarFile(project,variantName)
-                        GradleUtils.executeMerge(project,transformInvocation,injectedJar)
-                        transformInvocation = GradleUtils.createNewTransformInvocation(base,transformInvocation,injectedJar)
-                    }
-                }
-                else {
-                    //如果没有开启multidex需要在此处做注入
-                    ClassInject.injectTransformInvocation(fastdexVariant,transformInvocation)
-                    if (fastdexVariant.configuration.useCustomCompile) {
-                        File injectedJar = FastdexUtils.getInjectedJarFile(project,variantName)
-                        GradleUtils.executeMerge(project,transformInvocation,injectedJar)
-                    }
-                }
-            }
+//            if (useBuildCache) {
+//                ClassInject.injectTransformInvocation(fastdexVariant,transformInvocation)
+//            }
+//            else {
+//                def config = fastdexVariant.getVariantConfiguration()
+//                boolean isMultiDexEnabled = config.isMultiDexEnabled()
+//
+//                if (isMultiDexEnabled) {
+//                    if (!fastdexVariant.executedJarMerge) {
+//                        ClassInject.injectTransformInvocation(fastdexVariant,transformInvocation)
+//                        File injectedJar = FastdexUtils.getInjectedJarFile(project,variantName)
+//                        GradleUtils.executeMerge(project,transformInvocation,injectedJar)
+//                        transformInvocation = GradleUtils.createNewTransformInvocation(base,transformInvocation,injectedJar)
+//                    }
+//                }
+//                else {
+//                    //如果没有开启multidex需要在此处做注入
+//                    ClassInject.injectTransformInvocation(fastdexVariant,transformInvocation)
+//                    if (fastdexVariant.configuration.useCustomCompile) {
+//                        File injectedJar = FastdexUtils.getInjectedJarFile(project,variantName)
+//                        GradleUtils.executeMerge(project,transformInvocation,injectedJar)
+//                    }
+//                }
+//            }
             //调用默认转换方法
             base.transform(transformInvocation)
             //获取dex输出路径
             File dexOutputDir = GradleUtils.getDexOutputDir(project,base,transformInvocation,useBuildCache)
+
             project.logger.error("==fastdex dexOutputDir: ${dexOutputDir}")
 
             //缓存dex
@@ -247,25 +252,33 @@ class FastdexTransform extends TransformProxy {
      * @param dexOutputDir dex输出路径
      */
     void hookNormalBuildDex(File dexOutputDir, boolean useBuildCache) {
-        if (useBuildCache) {
-            dexOutputDir = FastdexUtils.mergeDexOutputDir(dexOutputDir)
-        }
-        else {
-            //dexelements [fastdex-runtime.dex ${dex_cache}.listFiles]
-            //runtime.dex            => classes.dex
-            //dex_cache.classes.dex  => classes2.dex
-            //dex_cache.classes2.dex => classes3.dex
-            //dex_cache.classesN.dex => classes(N + 1).dex
+        //dexelements [fastdex-runtime.dex ${dex_cache}.listFiles]
+        //runtime.dex            => classes.dex
+        //dex_cache.classes.dex  => classes2.dex
+        //dex_cache.classes2.dex => classes3.dex
+        //dex_cache.classesN.dex => classes(N + 1).dex
 
-            FastdexUtils.incrementDexDir(dexOutputDir)
-        }
+        project.logger.error(" ")
+        printLogWhenDexGenerateComplete(dexOutputDir,true)
+
+        dexOutputDir = FastdexUtils.mergeDexOutputDir(dexOutputDir)
+//        if (useBuildCache) {
+//            dexOutputDir = FastdexUtils.mergeDexOutputDir(dexOutputDir)
+//        }
+//        else {
+//            FastdexUtils.incrementDexDir(dexOutputDir)
+//        }
 
         //fastdex-runtime.dex = > classes.dex
         copyFastdexRuntimeDex(new File(dexOutputDir,Constants.CLASSES_DEX))
         printLogWhenDexGenerateComplete(dexOutputDir,true)
+        project.logger.error(" ")
     }
 
     void hookPatchBuildDex(HookPatchBuildDexArgs args) {
+        if (args == null) {
+            return
+        }
         hookPatchBuildDex(args.dexOutputDir,args.useBuildCache,args.willExecDexMerge)
     }
     /**
@@ -302,12 +315,14 @@ class FastdexTransform extends TransformProxy {
             dsize += 1
         }
 
-        if (useBuildCache) {
-            dexOutputDir = FastdexUtils.mergeDexOutputDir(dexOutputDir,dsize)
-        }
-        else {
-            FastdexUtils.incrementDexDir(dexOutputDir,dsize)
-        }
+        dexOutputDir = FastdexUtils.mergeDexOutputDir(dexOutputDir,dsize)
+
+//        if (useBuildCache) {
+//            dexOutputDir = FastdexUtils.mergeDexOutputDir(dexOutputDir,dsize)
+//        }
+//        else {
+//            FastdexUtils.incrementDexDir(dexOutputDir,dsize)
+//        }
 
         printLogWhenDexGenerateComplete(dexOutputDir,false)
         //copy fastdex-runtime.dex

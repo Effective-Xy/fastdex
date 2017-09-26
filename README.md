@@ -6,7 +6,7 @@
 
 ![fastdex.png](fastdex-idea-plugin/src/main/resources/icons/bg_update.png)
 
-Android API 9(2.3)+  ; android-gradle-build 2.0.0+
+Android API 9(2.3)+  ; android-gradle-build 2.1.0+
 
 [版本记录](https://github.com/typ0520/fastdex/blob/master/CHANGELOG.md)
 
