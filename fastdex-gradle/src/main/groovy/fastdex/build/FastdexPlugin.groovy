@@ -205,7 +205,7 @@ class FastdexPlugin implements Plugin<Project> {
                     //TODO change api
                     variantOutput.processManifest.dependsOn getMergeDebugResources(project,variantName)
                     //variantOutput.processManifest.dependsOn variant.getVariantData().getScope().getMergeResourcesTask()
-                    //替换项目的Application为com.dx168.fastdex.runtime.FastdexApplication
+                    //替换项目的Application为fastdex.runtime.FastdexApplication
                     FastdexManifestTask manifestTask = project.tasks.create("fastdexProcess${variantName}Manifest", FastdexManifestTask)
                     manifestTask.fastdexVariant = fastdexVariant
                     if (variant.flavorName) {

@@ -380,6 +380,10 @@ public class FastdexUtils {
         return project.android.dataBinding && project.android.dataBinding.enabled
     }
 
+    public static void incrementDexDir(File dexDir) {
+        incrementDexDir(dexDir,1)
+    }
+
     /**
      * 递增指定目录中的dex
      *

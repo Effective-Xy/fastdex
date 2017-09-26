@@ -168,7 +168,7 @@ class FastdexTransform extends TransformProxy {
             project.logger.error("==fastdex dexOutputDir: ${dexOutputDir}")
 
             //缓存dex
-            int dexCount = cacheNormalBuildDex(dexOutputDir,useBuildCache)
+            int dexCount = cacheNormalBuildDex(dexOutputDir)
 
             //复制全量打包的dex到输出路径
             hookNormalBuildDex(dexOutputDir,useBuildCache)
@@ -240,32 +240,9 @@ class FastdexTransform extends TransformProxy {
      * @param dexOutputDir dex输出路径
      */
     int cacheNormalBuildDex(File dexOutputDir) {
-        return cacheNormalBuildDex(dexOutputDir,false)
-    }
-
-    /**
-     * 缓存全量打包时生成的dex
-     * @param dexOutputDir dex输出路径
-     */
-    int cacheNormalBuildDex(File dexOutputDir, boolean useBuildCache) {
         project.logger.error("==fastdex dex output directory: " + dexOutputDir)
-
-//        int dexCount = 0
-//        File cacheDexDir = FastdexUtils.getDexCacheDir(project,variantName)
-//        File[] files = dexOutputDir.listFiles()
-//        files.each { file ->
-//            if (file.getName().endsWith(Constants.DEX_SUFFIX)) {
-//                FileUtils.copyFileUsingStream(file,new File(cacheDexDir,file.getName()))
-//                dexCount = dexCount + 1
-//            }
-//        }
-//        return dexCount
         File cacheDexDir = FastdexUtils.getDexCacheDir(project,variantName)
         return FileUtils.copyDir(dexOutputDir,cacheDexDir,Constants.DEX_SUFFIX)
-    }
-
-    void incrementDexDir(File dexDir) {
-        FastdexUtils.incrementDexDir(dexDir,1)
     }
 
     /**
@@ -283,7 +260,7 @@ class FastdexTransform extends TransformProxy {
             //dex_cache.classes2.dex => classes3.dex
             //dex_cache.classesN.dex => classes(N + 1).dex
 
-            incrementDexDir(dexOutputDir)
+            FastdexUtils.incrementDexDir(dexOutputDir)
         }
 
         //fastdex-runtime.dex = > classes.dex
