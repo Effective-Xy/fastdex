@@ -3,6 +3,7 @@ package fastdex.build.variant
 import com.github.typ0520.fastdex.Version
 import fastdex.build.extension.FastdexExtension
 import fastdex.build.task.FastdexInstantRunTask
+import fastdex.build.transform.FastdexTransform
 import fastdex.build.util.Constants
 import fastdex.build.util.FastdexInstantRun
 import fastdex.build.util.FastdexRuntimeException
@@ -40,6 +41,7 @@ public class FastdexVariant {
     boolean executedDexTransform
     boolean hasJarMergingTask
     MetaInfo metaInfo
+    FastdexTransform fastdexTransform
     FastdexInstantRun fastdexInstantRun
     FastdexInstantRunTask fastdexInstantRunTask
 
@@ -231,7 +233,7 @@ public class FastdexVariant {
                 copyRTxt()
             }
         }
-        copyMetaInfo2Assets()
+        //copyMetaInfo2Assets()
         projectSnapshoot.onDexGenerateSuccess(nornalBuild,dexMerge)
         fastdexInstantRun.onSourceChanged()
     }
@@ -248,12 +250,15 @@ public class FastdexVariant {
         File dest = new File(assetsPath,metaInfoFile.getName())
 
         project.logger.error("==fastdex copy meta info: \nfrom: " + metaInfoFile + "\ninto: " + dest)
-        //TODO fixbug
-//        if (!FileUtils.isLegalFile(dest)) {
-//            FileUtils.copyFileUsingStream(metaInfoFile,dest)
-//        }
-
         FileUtils.copyFileUsingStream(metaInfoFile,dest)
+    }
+
+    def onPrePackage() {
+        copyMetaInfo2Assets()
+
+        if (hasDexCache) {
+            fastdexTransform.hookPatchBuildDex(fastdexTransform.hookPatchBuildDexArgs)
+        }
     }
 
     /**

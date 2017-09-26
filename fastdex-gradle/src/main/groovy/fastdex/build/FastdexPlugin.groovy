@@ -306,7 +306,7 @@ class FastdexPlugin implements Plugin<Project> {
                         project.logger.error("==fastdex find package task: " + packageTask.name)
 
                         packageTask.doFirst {
-                            fastdexVariant.copyMetaInfo2Assets()
+                            fastdexVariant.onPrePackage()
                         }
                     }
 
@@ -353,6 +353,7 @@ class FastdexPlugin implements Plugin<Project> {
 
                                         //代理DexTransform,实现自定义的转换
                                         FastdexTransform fastdexTransform = new FastdexTransform(transform,fastdexVariant)
+                                        fastdexVariant.fastdexTransform = fastdexTransform
                                         Field field = getFieldByName(task.getClass(),'transform')
                                         field.setAccessible(true)
                                         field.set(task,fastdexTransform)

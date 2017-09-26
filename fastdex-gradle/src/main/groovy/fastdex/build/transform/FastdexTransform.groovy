@@ -57,6 +57,8 @@ class FastdexTransform extends TransformProxy {
     Project project
     String variantName
 
+    HookPatchBuildDexArgs hookPatchBuildDexArgs
+
     FastdexTransform(Transform base, FastdexVariant fastdexVariant) {
         super(base)
         this.fastdexVariant = fastdexVariant
@@ -87,33 +89,28 @@ class FastdexTransform extends TransformProxy {
                 if (willExecDexMerge) {
                     //merge dex
                     if (firstMergeDex) {
+                        //第一次执行dex merge,直接保存patchDex
                         //copy 一份相同的，做冗余操作，如果直接移动文件，会丢失patch.dex造成免安装模块特别难处理
                         FileUtils.copyFileUsingStream(patchDex,new File(mergedPatchDexDir,Constants.CLASSES_DEX))
-                        //第一只执行dex merge,直接保存patchDex
-                        //patch.dex              => classes.dex
-                        //dex_cache.classes.dex  => classes2.dex
-                        //dex_cache.classes2.dex => classes3.dex
-                        //dex_cache.classesN.dex => classes(N + 1).dex
-                        //复制补丁dex到输出路径
-                        hookPatchBuildDex(dexOutputDir,useBuildCache,willExecDexMerge)
                     }
                     else {
                         //已经执行过一次dex merge
                         File mergedPatchDex = new File(mergedPatchDexDir,Constants.CLASSES_DEX)
                         //更新patch.dex
                         DexOperation.mergeDex(fastdexVariant,mergedPatchDex,patchDex,mergedPatchDex)
-                        hookPatchBuildDex(dexOutputDir, useBuildCache,willExecDexMerge)
                     }
                     fastdexVariant.metaInfo.mergedDexVersion += 1
-                    fastdexVariant.metaInfo.save(fastdexVariant)
-                    fastdexVariant.onDexGenerateSuccess(false,true)
                 }
-                else {
-                    fastdexVariant.metaInfo.save(fastdexVariant)
-                    //复制补丁打包的dex到输出路径
-                    hookPatchBuildDex(dexOutputDir, useBuildCache,willExecDexMerge)
-                    fastdexVariant.onDexGenerateSuccess(false,false)
-                }
+                fastdexVariant.metaInfo.save(fastdexVariant)
+
+                hookPatchBuildDexArgs = new HookPatchBuildDexArgs()
+                hookPatchBuildDexArgs.dexOutputDir = dexOutputDir
+                hookPatchBuildDexArgs.useBuildCache = useBuildCache
+                hookPatchBuildDexArgs.willExecDexMerge = willExecDexMerge
+
+                //复制补丁打包的dex到输出路径
+                //hookPatchBuildDex(dexOutputDir, useBuildCache,willExecDexMerge)
+                fastdexVariant.onDexGenerateSuccess(false,willExecDexMerge)
             }
             else {
                 project.logger.error("==fastdex no java files have changed, just ignore")
@@ -268,6 +265,9 @@ class FastdexTransform extends TransformProxy {
         printLogWhenDexGenerateComplete(dexOutputDir,true)
     }
 
+    void hookPatchBuildDex(HookPatchBuildDexArgs args) {
+        hookPatchBuildDex(args.dexOutputDir,args.useBuildCache,args.willExecDexMerge)
+    }
     /**
      * 补丁打包时复制dex到指定位置
      * @param dexOutputDir dex输出路径
@@ -369,5 +369,11 @@ class FastdexTransform extends TransformProxy {
         else {
             project.logger.error("==fastdex patch build ${sb}")
         }
+    }
+
+    public static class HookPatchBuildDexArgs {
+        File dexOutputDir
+        boolean useBuildCache
+        boolean willExecDexMerge
     }
 }
