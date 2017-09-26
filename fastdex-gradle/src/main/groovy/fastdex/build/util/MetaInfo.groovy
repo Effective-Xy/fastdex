@@ -38,8 +38,7 @@ public class MetaInfo {
 
     public boolean active
 
-    public boolean useBuildCache
-
+    public String dexOutputDir
 
     /**
      * 是否移动了工程目录

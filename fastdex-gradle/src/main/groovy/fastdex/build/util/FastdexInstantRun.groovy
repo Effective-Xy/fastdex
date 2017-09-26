@@ -154,7 +154,17 @@ public class FastdexInstantRun {
 
             }
             try {
+                project.tasks.getByName("validate${fastdexVariant.variantName}Signing").enabled = false
+            } catch (Throwable e) {
+
+            }
+            try {
                 project.tasks.getByName("package${fastdexVariant.variantName}").enabled = false
+            } catch (Throwable e) {
+
+            }
+            try {
+                project.tasks.getByName("zipalign${fastdexVariant.variantName}").enabled = false
             } catch (Throwable e) {
 
             }
@@ -186,7 +196,7 @@ public class FastdexInstantRun {
             File tempResourcesApk = new File(tempDir,resourcesApk.getName())
             FileUtils.copyFileUsingStream(resourceApFile,tempResourcesApk)
 
-            project.logger.error("==fastdex \ncopy : ${resourceApFile} \ninto: ${tempResourcesApk}")
+            project.logger.error("==fastdex copy resources.ap_ \ncopy : ${resourceApFile} \ninto: ${tempResourcesApk}")
             File assetsPath = fastdexVariant.androidVariant.getVariantData().getScope().getMergeAssetsOutputDir()
             List<String> assetFiles = getAssetFiles(assetsPath)
             File tempAssetsPath = new File(tempDir,"assets")
@@ -200,7 +210,7 @@ public class FastdexInstantRun {
 
 
             for (int i = 0; i < assetFiles.size(); i++) {
-                cmds[4 + i] = "assets/${assetFiles.get(i)}";
+                cmds[4 + i] = "assets/" + assetFiles.get(i).toString()
             }
 
             ProcessBuilder processBuilder = new ProcessBuilder(cmds)

@@ -539,6 +539,19 @@ public class FastdexUtils {
         return result
     }
 
+    public static void clearDexOutputDir(File dexOutputDir) {
+        if (dexOutputDir == null) {
+            return
+        }
+        dexOutputDir.listFiles().each {
+            //println("each: " + it.absolutePath)
+            if (it.isFile() && !(it.name.startsWith(ShareConstants.CLASSES) && it.name.endsWith(ShareConstants.DEX_SUFFIX))) {
+                //println("remove: " + it.absolutePath)
+                it.delete()
+            }
+        }
+    }
+
     public static void main(String[] args) {
         int maxSize = getMaxClassesDexIndex(new File("/Users/tong/Projects/fastdex/sample/app/build/intermediates/transforms/dex/debug/folders/1000/10/classes_0a3884a7c335c146d6da239bb3135a1cb5ade7df"));
         System.out.println(maxSize)
