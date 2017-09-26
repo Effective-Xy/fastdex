@@ -10,7 +10,6 @@ import fastdex.build.util.FastdexUtils
 import fastdex.build.util.GradleUtils
 import fastdex.build.variant.FastdexVariant
 import com.google.common.collect.Lists
-import fastdex.common.ShareConstants
 import fastdex.common.utils.SerializeUtils
 import org.gradle.api.Project
 import fastdex.common.utils.FileUtils
@@ -82,43 +81,29 @@ class FastdexTransform extends TransformProxy {
                 //merged dex
                 File mergedPatchDexDir = FastdexUtils.getMergedPatchDexDir(fastdexVariant.project,fastdexVariant.variantName)
 
-                if (fastdexVariant.willExecDexMerge()) {
+                boolean willExecDexMerge = fastdexVariant.willExecDexMerge()
+                boolean firstMergeDex = fastdexVariant.metaInfo.mergedDexVersion == 0
+
+                if (willExecDexMerge) {
                     //merge dex
-                    if (FileUtils.hasDex(mergedPatchDexDir)) {
-                        //已经执行过一次dex merge
-                        File cacheDexDir = FastdexUtils.getDexCacheDir(project,variantName)
-                        //File outputDex = new File(dexOutputDir,"merged-patch.dex")
-                        File mergedPatchDex = new File(mergedPatchDexDir,Constants.CLASSES_DEX)
-                        //更新patch.dex
-                        DexOperation.mergeDex(fastdexVariant,mergedPatchDex,patchDex,mergedPatchDex)
-
-                        FileUtils.cleanDir(dexOutputDir)
-                        FileUtils.copyDir(cacheDexDir,dexOutputDir,Constants.DEX_SUFFIX)
-
-                        FastdexUtils.incrementDexDir(dexOutputDir,2)
-                        //copy merged-patch.dex
-                        FileUtils.copyFileUsingStream(mergedPatchDex,new File(dexOutputDir,"${Constants.CLASSES}2${Constants.DEX_SUFFIX}"))
-
-                        //copy fastdex-runtime.dex
-                        copyFastdexRuntimeDex(new File(dexOutputDir,Constants.CLASSES_DEX))
-                    }
-                    else {
+                    if (firstMergeDex) {
+                        //copy 一份相同的，做冗余操作，如果直接移动文件，会丢失patch.dex造成免安装模块特别难处理
+                        FileUtils.copyFileUsingStream(patchDex,new File(mergedPatchDexDir,Constants.CLASSES_DEX))
                         //第一只执行dex merge,直接保存patchDex
                         //patch.dex              => classes.dex
                         //dex_cache.classes.dex  => classes2.dex
                         //dex_cache.classes2.dex => classes3.dex
                         //dex_cache.classesN.dex => classes(N + 1).dex
                         //复制补丁dex到输出路径
-                        hookPatchBuildDex(dexOutputDir,mergedPatchDexDir,patchDex, useBuildCache)
-
-                        FileUtils.cleanDir(mergedPatchDexDir)
-                        FileUtils.ensumeDir(mergedPatchDexDir)
-
-                        //copy 一份相同的，做冗余操作，如果直接移动文件，会丢失patch.dex造成免安装模块特别难处理
-                        FileUtils.copyFileUsingStream(patchDex,new File(mergedPatchDexDir,Constants.CLASSES_DEX))
-                        //patchDex.renameTo(new File(mergedPatchDexDir,Constants.CLASSES_DEX))
+                        hookPatchBuildDex(dexOutputDir,useBuildCache,willExecDexMerge)
                     }
-
+                    else {
+                        //已经执行过一次dex merge
+                        File mergedPatchDex = new File(mergedPatchDexDir,Constants.CLASSES_DEX)
+                        //更新patch.dex
+                        DexOperation.mergeDex(fastdexVariant,mergedPatchDex,patchDex,mergedPatchDex)
+                        hookPatchBuildDex(dexOutputDir, useBuildCache,willExecDexMerge)
+                    }
                     fastdexVariant.metaInfo.mergedDexVersion += 1
                     fastdexVariant.metaInfo.save(fastdexVariant)
                     fastdexVariant.onDexGenerateSuccess(false,true)
@@ -126,7 +111,7 @@ class FastdexTransform extends TransformProxy {
                 else {
                     fastdexVariant.metaInfo.save(fastdexVariant)
                     //复制补丁打包的dex到输出路径
-                    hookPatchBuildDex(dexOutputDir,mergedPatchDexDir,patchDex, useBuildCache)
+                    hookPatchBuildDex(dexOutputDir, useBuildCache,willExecDexMerge)
                     fastdexVariant.onDexGenerateSuccess(false,false)
                 }
             }
@@ -135,7 +120,7 @@ class FastdexTransform extends TransformProxy {
             }
         }
         else {
-            if (!fastdexVariant.executedJarMerge) {
+            if (!fastdexVariant.hasJarMergingTask) {
                 //所有输入的jar
                 Set<String> jarInputFiles = new HashSet<>();
                 for (TransformInput input : transformInvocation.getInputs()) {
@@ -184,6 +169,7 @@ class FastdexTransform extends TransformProxy {
 
             //缓存dex
             int dexCount = cacheNormalBuildDex(dexOutputDir,useBuildCache)
+
             //复制全量打包的dex到输出路径
             hookNormalBuildDex(dexOutputDir,useBuildCache)
 
@@ -206,6 +192,8 @@ class FastdexTransform extends TransformProxy {
             FileUtils.copyResourceUsingStream(Constants.RUNTIME_DEX_FILENAME, fastdexRuntimeDex)
         }
         FileUtils.copyFileUsingStream(fastdexRuntimeDex, dist)
+
+        project.logger.error("==fastdex fastdex-runtime.dex => " + dist)
     }
 
     /**
@@ -272,7 +260,6 @@ class FastdexTransform extends TransformProxy {
 //            }
 //        }
 //        return dexCount
-
         File cacheDexDir = FastdexUtils.getDexCacheDir(project,variantName)
         return FileUtils.copyDir(dexOutputDir,cacheDexDir,Constants.DEX_SUFFIX)
     }
@@ -287,28 +274,7 @@ class FastdexTransform extends TransformProxy {
      */
     void hookNormalBuildDex(File dexOutputDir, boolean useBuildCache) {
         if (useBuildCache) {
-            //fastdex-runtime.dex = > build/intermediates/transforms/dex/debug/folders/1000/0/0/classes.dex
-
-            //防止重复的引入runtime.dex
-            FastdexUtils.removeFastdexRuntimeDex(dexOutputDir,useBuildCache)
-
-            File[] files = dexOutputDir.listFiles()
-            File firstDir = null
-            if (files != null) {
-                for (File file : files) {
-                    if (file.isDirectory()) {
-                        firstDir = file
-                        break
-                    }
-                }
-            }
-
-            if (firstDir != null) {
-                copyFastdexRuntimeDex(com.android.utils.FileUtils.join(dexOutputDir,firstDir.getName(),Constants.FASTDEX_RUNTIMNE_BUILD_CACHE_FILE_NAME,Constants.CLASSES_DEX))
-            }
-            else {
-                copyFastdexRuntimeDex(com.android.utils.FileUtils.join(dexOutputDir,"1",Constants.FASTDEX_RUNTIMNE_BUILD_CACHE_FILE_NAME,Constants.CLASSES_DEX))
-            }
+            dexOutputDir = FastdexUtils.mergeDexOutputDir(dexOutputDir)
         }
         else {
             //dexelements [fastdex-runtime.dex ${dex_cache}.listFiles]
@@ -318,114 +284,74 @@ class FastdexTransform extends TransformProxy {
             //dex_cache.classesN.dex => classes(N + 1).dex
 
             incrementDexDir(dexOutputDir)
-
-            //fastdex-runtime.dex = > classes.dex
-            copyFastdexRuntimeDex(new File(dexOutputDir,Constants.CLASSES_DEX))
-            printLogWhenDexGenerateComplete(dexOutputDir,true)
         }
+
+        //fastdex-runtime.dex = > classes.dex
+        copyFastdexRuntimeDex(new File(dexOutputDir,Constants.CLASSES_DEX))
+        printLogWhenDexGenerateComplete(dexOutputDir,true)
     }
 
     /**
      * 补丁打包时复制dex到指定位置
      * @param dexOutputDir dex输出路径
      */
-    void hookPatchBuildDex(File dexOutputDir,File mergedPatchDexDir,File patchDex, boolean useBuildCache) {
+    void hookPatchBuildDex(File dexOutputDir, boolean useBuildCache,boolean willExecDexMerge) {
         //dexelements [fastdex-runtime.dex patch.dex ${dex_cache}.listFiles]
         //runtime.dex            => classes.dex
         //patch.dex              => classes2.dex
         //dex_cache.classes.dex  => classes3.dex
         //dex_cache.classes2.dex => classes4.dex
         //dex_cache.classesN.dex => classes(N + 2).dex
-        project.logger.error("==fastdex patch transform hook patch dex start, useBuildCache: ${useBuildCache}")
 
-        File mergedPatchDex = new File(mergedPatchDexDir,Constants.CLASSES_DEX)
+        project.logger.error(" ")
+        project.logger.error("==fastdex patch transform hook patch dex start")
+
         File cacheDexDir = FastdexUtils.getDexCacheDir(project,variantName)
 
+        File patchDex = FastdexUtils.getPatchDexFile(fastdexVariant.project,fastdexVariant.variantName)
+        File mergedPatchDex = FastdexUtils.getMergedPatchDexFile(fastdexVariant.project,fastdexVariant.variantName)
+
+        FileUtils.cleanDir(dexOutputDir)
+        FileUtils.copyDir(cacheDexDir,dexOutputDir,Constants.DEX_SUFFIX)
+
+        int dsize = 1
+        //如果本次打包触发了dexmerge就不需要patch.dex了
+        boolean copyPatchDex = !willExecDexMerge && FileUtils.isLegalFile(patchDex)
+        if (copyPatchDex) {
+            dsize += 1
+        }
+        boolean copyMergedPatchDex = FileUtils.isLegalFile(mergedPatchDex)
+        if (copyMergedPatchDex) {
+            dsize += 1
+        }
+
         if (useBuildCache) {
-            File[] files = cacheDexDir.listFiles()
-            File firstDir = null
-            if (files != null) {
-                for (File file : files) {
-                    if (file.isDirectory()) {
-                        firstDir = file
-                        break
-                    }
-                }
-            }
-//            FileUtils.copyDir(cacheDexDir, dexOutputDir,ShareConstants.DEX_SUFFIX,false)
-//            File outputDir = com.android.utils.FileUtils.join(dexOutputDir,firstDir.getName())
-//
-//
-//            File targetDir = com.android.utils.FileUtils.join(outputDir,Constants.FASTDEX_RUNTIMNE_BUILD_CACHE_FILE_NAME)
-//
-//            FileUtils.cleanDir(targetDir)
-//            copyFastdexRuntimeDex(new File(targetDir,Constants.CLASSES_DEX))
-//
-//
-//            int point = 2
-//
-//            if (FileUtils.isLegalFile(patchDex)) {
-//                FileUtils.copyFileUsingStream(patchDex,new File(targetDir,"classes${point}.dex"))
-//                point++
-//            }
-//
-//            if (FileUtils.isLegalFile(mergedPatchDex)) {
-//                FileUtils.copyFileUsingStream(mergedPatchDex,new File(targetDir,"classes${point}.dex"))
-//            }
-
-            FileUtils.copyDir(cacheDexDir, dexOutputDir,ShareConstants.DEX_SUFFIX,false)
-
-            File outputDir = com.android.utils.FileUtils.join(dexOutputDir,firstDir.getName())
-
-            File targetDir = com.android.utils.FileUtils.join(outputDir,"0_0")
-            FileUtils.cleanDir(targetDir)
-            copyFastdexRuntimeDex(new File(targetDir,Constants.CLASSES_DEX))
-
-
-            if (FileUtils.isLegalFile(patchDex)) {
-                File patchOutputDir = com.android.utils.FileUtils.join(outputDir,"0_1")
-                FileUtils.cleanDir(patchOutputDir)
-
-                FileUtils.copyFileUsingStream(patchDex,new File(patchOutputDir,"classes.dex"))
-            }
-
-            if (FileUtils.isLegalFile(mergedPatchDex)) {
-                File mergedPatchOutputDir = com.android.utils.FileUtils.join(outputDir,"0_2")
-                FileUtils.cleanDir(mergedPatchOutputDir)
-
-                FileUtils.copyFileUsingStream(mergedPatchOutputDir,new File(targetDir,"classes.dex"))
-            }
+            dexOutputDir = FastdexUtils.mergeDexOutputDir(dexOutputDir,dsize)
         }
         else {
-            FileUtils.cleanDir(dexOutputDir)
-            //copy fastdex-runtime.dex
-            copyFastdexRuntimeDex(new File(dexOutputDir,Constants.CLASSES_DEX))
-            //copy patch.dex
-            FileUtils.copyFileUsingStream(patchDex,new File(dexOutputDir,"classes2.dex"))
-            if (FileUtils.fileExists(mergedPatchDex.absolutePath)) {
-                FileUtils.copyFileUsingStream(mergedPatchDex,new File(dexOutputDir,"classes3.dex"))
-                FileUtils.copyFileUsingStream(new File(cacheDexDir,Constants.CLASSES_DEX),new File(dexOutputDir,"classes4.dex"))
-
-                int point = 2
-                File dexFile = new File(cacheDexDir,"${Constants.CLASSES}${point}${Constants.DEX_SUFFIX}")
-                while (FileUtils.isLegalFile(dexFile)) {
-                    FileUtils.copyFileUsingStream(dexFile,new File(dexOutputDir,"${Constants.CLASSES}${point + 3}${Constants.DEX_SUFFIX}"))
-                    point++
-                    dexFile = new File(cacheDexDir,"${Constants.CLASSES}${point}${Constants.DEX_SUFFIX}")
-                }
-            }
-            else {
-                FileUtils.copyFileUsingStream(new File(cacheDexDir,Constants.CLASSES_DEX),new File(dexOutputDir,"classes3.dex"))
-                int point = 2
-                File dexFile = new File(cacheDexDir,"${Constants.CLASSES}${point}${Constants.DEX_SUFFIX}")
-                while (FileUtils.isLegalFile(dexFile)) {
-                    FileUtils.copyFileUsingStream(dexFile,new File(dexOutputDir,"${Constants.CLASSES}${point + 2}${Constants.DEX_SUFFIX}"))
-                    point++
-                    dexFile = new File(cacheDexDir,"${Constants.CLASSES}${point}${Constants.DEX_SUFFIX}")
-                }
-            }
-            printLogWhenDexGenerateComplete(dexOutputDir,false)
+            FastdexUtils.incrementDexDir(dexOutputDir,dsize)
         }
+
+        printLogWhenDexGenerateComplete(dexOutputDir,false)
+        //copy fastdex-runtime.dex
+        copyFastdexRuntimeDex(new File(dexOutputDir,Constants.CLASSES_DEX))
+
+        int point = 2
+        if (copyPatchDex) {
+            //copy patch.dex
+            FileUtils.copyFileUsingStream(patchDex,new File(dexOutputDir,"classes${point}.dex"))
+            point += 1
+
+            project.logger.error("==fastdex patch.dex => " + new File(dexOutputDir,"classes${point}.dex"))
+        }
+        if (copyMergedPatchDex) {
+            //copy merged-patch.dex
+            FileUtils.copyFileUsingStream(mergedPatchDex,new File(dexOutputDir,"classes${point}.dex"))
+
+            project.logger.error("==fastdex merged-patch.dex => " + new File(dexOutputDir,"classes${point}.dex"))
+        }
+        printLogWhenDexGenerateComplete(dexOutputDir,false)
+        project.logger.error(" ")
     }
 
     /**

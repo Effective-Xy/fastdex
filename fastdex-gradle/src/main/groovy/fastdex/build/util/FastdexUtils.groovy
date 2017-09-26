@@ -195,6 +195,16 @@ public class FastdexUtils {
     }
 
     /**
+     * 获取指定variantName的已合并的补丁dex
+     * @param project
+     * @return
+     */
+    public static final File getMergedPatchDexFile(Project project,String variantName) {
+        File file = new File(getMergedPatchDexDir(project,variantName),Constants.CLASSES_DEX);
+        return file;
+    }
+
+    /**
      * 获取指定variantName的补丁dex目录
      * @param project
      * @return
@@ -439,5 +449,103 @@ public class FastdexUtils {
                 return FileVisitResult.CONTINUE;
             }
         });
+    }
+
+    /**
+     * 使用buildCache全量打包时hook dex输出目录
+     * @param dexOutputDir
+     */
+    public static File mergeDexOutputDir(File dexOutputDir, int dsize) {
+        final HashSet<File> dexDirSet = new HashSet<>()
+        Files.walkFileTree(dexOutputDir.toPath(),new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                if (file.toFile().getName().endsWith(Constants.DEX_SUFFIX)) {
+                    dexDirSet.add(file.getParent().toFile())
+                }
+                return FileVisitResult.CONTINUE;
+            }
+        });
+
+        File result = null;
+        int maxClassesDexIndex = 0
+        for (File dir : dexDirSet) {
+            if (result == null) {
+                result = dir;
+                incrementDexDir(dir,dsize)
+                maxClassesDexIndex = FastdexUtils.getMaxClassesDexIndex(dir)
+
+                //println "${dir}, ${dsize}, ${maxClassesDexIndex}"
+            }
+            else {
+                //println "${dir}, ${maxClassesDexIndex}"
+
+                incrementDexDir(dir,maxClassesDexIndex)
+                maxClassesDexIndex += FileUtils.moveDir(dir,result,ShareConstants.DEX_SUFFIX)
+
+            }
+        }
+        return result
+    }
+
+    /**
+     * 使用buildCache全量打包时hook dex输出目录
+     * @param dexOutputDir
+     */
+    public static File mergeDexOutputDir(File dexOutputDir) {
+        mergeDexOutputDir(dexOutputDir,1)
+    }
+
+    /**
+     * 获取目录中所有classesN.dex中N的最大值
+     * @param dexDir
+     * @return
+     */
+    public static int getMaxClassesDexIndex(File dexDir) {
+        if (dexDir.listFiles() == null) {
+            return 0
+        }
+        def prefix = ShareConstants.CLASSES
+        def suffix = ShareConstants.DEX_SUFFIX
+
+        int result = 0
+        dexDir.listFiles().each {
+            def filename = it.name
+            int index = 0
+
+            if (filename == ShareConstants.CLASSES_DEX) {
+                index = 1
+            }
+            else if (filename.startsWith(prefix) && filename.endsWith(suffix)) {
+                filename = filename.substring(prefix.length())
+                //println "filename: ${filename}"
+                filename = filename.substring(0,filename.length() - suffix.length())
+
+                //println "filename: ${filename}"
+                try {
+                    index = Integer.parseInt(filename)
+                } catch (Throwable e) {
+
+                }
+            }
+            if (index > result) {
+                result = index
+            }
+        }
+        return result
+    }
+
+    public static void main(String[] args) {
+        int maxSize = getMaxClassesDexIndex(new File("/Users/tong/Projects/fastdex/sample/app/build/intermediates/transforms/dex/debug/folders/1000/10/classes_0a3884a7c335c146d6da239bb3135a1cb5ade7df"));
+        System.out.println(maxSize)
+//        System.out.println(getMaxClassesDexIndex(new File("/Users/tong/Projects/fastdex/sample/app/build/intermediates/transforms/dex/debug/folders/test/2/fm-sdk-2.1.2_48a148b931ec01a2d97a037505e06f216a313cf0")))
+//        System.out.println(getMaxClassesDexIndex(new File("/Users/tong/Projects/fastdex-test-project/hook-build-cache/dexdir")))
+//
+//        File source = new File("/Users/tong/Projects/fastdex/sample/app/build/intermediates/transforms/dex/debug/folders/1000")
+//        File dest = new File("/Users/tong/Projects/fastdex/sample/app/build/intermediates/transforms/dex/debug/folders/test")
+//        dest.deleteDir()
+//
+//        FileUtils.copyDir(source,dest)
+//        FastdexUtils.hookNormalBuildDexOutputDir(dest)
     }
 }

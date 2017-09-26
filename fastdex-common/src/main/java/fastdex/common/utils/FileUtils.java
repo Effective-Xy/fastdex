@@ -281,6 +281,38 @@ public class FileUtils {
         return simpleFileVisitor.totalSize;
     }
 
+    public static int moveDir(File sourceDir, File destDir, final String suffix) throws IOException {
+        final Path sourcePath = sourceDir.toPath();
+        final Path destPath = destDir.toPath();
+
+
+        class MoveDirSimpleFileVisitor extends SimpleFileVisitor<Path> {
+            public int totalSize = 0;
+
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                if (suffix != null && !file.toFile().getName().endsWith(suffix)) {
+                    return FileVisitResult.CONTINUE;
+                }
+                Path relativePath = sourcePath.relativize(file);
+                Path classFilePath = destPath.resolve(relativePath);
+
+                File source = file.toFile();
+                File dest = classFilePath.toFile();
+
+                //System.out.println("dest: " + dest);
+                source.renameTo(dest);
+                dest.setLastModified(source.lastModified());
+                totalSize++;
+                return FileVisitResult.CONTINUE;
+            }
+        }
+
+        MoveDirSimpleFileVisitor simpleFileVisitor = new MoveDirSimpleFileVisitor();
+        Files.walkFileTree(sourceDir.toPath(),simpleFileVisitor);
+        return simpleFileVisitor.totalSize;
+    }
+
     public static int copyDir(File sourceDir, File destDir) throws IOException {
         return copyDir(sourceDir,destDir,null);
     }

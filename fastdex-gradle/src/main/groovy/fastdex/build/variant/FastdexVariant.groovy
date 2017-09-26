@@ -5,6 +5,7 @@ import fastdex.build.extension.FastdexExtension
 import fastdex.build.task.FastdexInstantRunTask
 import fastdex.build.util.Constants
 import fastdex.build.util.FastdexInstantRun
+import fastdex.build.util.FastdexRuntimeException
 import fastdex.common.utils.SerializeUtils
 import fastdex.build.util.LibDependency
 import fastdex.build.util.MetaInfo
@@ -57,7 +58,7 @@ public class FastdexVariant {
         libraryDependencies = LibDependency.resolveProjectDependency(project,androidVariant)
 
         if (configuration.dexMergeThreshold <= 1) {
-            throw new GradleException("dexMergeThreshold Must be greater than 1!!")
+            throw new FastdexRuntimeException("DexMergeThreshold must be greater than 1!!")
         }
     }
 
